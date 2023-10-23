@@ -1,11 +1,25 @@
+""" Escreva um programa em Python que simula um ecosistema.
+Este ecosistema consiste de um rio, modelado como uma lista,
+que contém dois tipos de animais: ursos e peixes.
+
+No ecosistema, cada elemento da lista deve ser um objeto do
+tipo Urso, Peixe ou None (que indica que a posição do rio
+está vazia).
+
+A cada rodada do jogo, baseada em um processo aleatório, cada
+animal tenta se mover para uma posição da lista adjacente (a
+esquerda ou direita) ou permanece na sua mesma posição.
+
+Se dois animais do mesmo tipo colidirem (urso com urso ou peixe com peixe),
+eles permanecem em suas posições originais, mas uma nova instância do
+animal deve ser posicionada em um local vazio, aleatoriamente determinado.
+
+Se um Urso e um peixe colidirem, entretanto, o peixe morre."""
+
 from abc import ABC, abstractmethod
 from enum import IntEnum, unique
 import random
 
-@unique
-class Sexo(IntEnum):
-    F = 0
-    M = 1
 
 @unique
 class Direcao(IntEnum):
@@ -13,13 +27,21 @@ class Direcao(IntEnum):
     PARADO = 0
     DIREITA = 1
 
+
+identifier: int = 0  # apenas debug
+
+
 class Rio:
+
     def __init__(self, tamanho_rio: int):
         self.__controle_terra = [False] * tamanho_rio
         self.__rio = [Planta()] * tamanho_rio
         self.__popular_rio()
 
-    def __popular_rio(self):        
+    def __popular_rio(self):
+        """ No ecosistema, cada elemento da lista deve ser um objeto do
+        tipo Urso, Peixe, Planta (que indica que a posição do rio está
+        vazia) ou None (que indica que posição do rio é 'terra arrasada')."""
         qtd_ursos = int(0.2 * len(self.__rio))
         qtd_peixes = int(0.4 * len(self.__rio))
         qtd_tocas = int(0.1 * len(self.__rio))
@@ -32,15 +54,15 @@ class Rio:
             bicho = 0
             while bicho < qtd_animal:
                 posicao = random.randint(0, len(self.__rio) - 1)
-                if self.__rio[posicao] == Planta() or self.__rio[posicao] == Terra():                    
+                if self.__rio[posicao] == Planta() or self.__rio[posicao] == Terra():
                     self.__rio[posicao] = elemento()
                     bicho += 1
 
     def fluir(self):
         for i in range(len(self.__rio)):
-            if isinstance(self.__rio[i], Animal):  
+            if isinstance(self.__rio[i], Animal):  # apenas animais se movem
                 animal = self.__rio[i]
-                direcao = animal.obter_direcao()                
+                direcao = animal.obter_direcao()
                 nova = i + direcao
                 if i != nova and not nova < 0 and not nova >= len(self.__rio):
                     self.__colidir(i, nova)
@@ -73,7 +95,7 @@ class Rio:
                 self.__rio[nova].entrar(peixe)
             else:
                 self.__rio[atual].entrar(peixe)
-        elif isinstance(self.__rio[nova], Planta) or isinstance(self.__rio[nova], Terra):  
+        elif isinstance(self.__rio[nova], Planta) or isinstance(self.__rio[nova], Terra):  # planta ou terra
             self.__rio[nova] = peixe
 
     def __colisao_urso(self, atual, nova):
@@ -88,7 +110,7 @@ class Rio:
                 if self.__rio[toca].vazia():
                     self.__rio[toca].entrar(self.__rio[nova])
             self.__arrasar(atual, nova, urso)
-        elif not isinstance(self.__rio[nova], Toca):  
+        elif not isinstance(self.__rio[nova], Toca):  # se for planta ou terra
             self.__arrasar(atual, nova, urso)
 
     def __arrasar(self, atual, nova, urso):
@@ -114,7 +136,25 @@ class Rio:
             self.__rio[posicao] = Planta()
         else:
             self.__rio[posicao] = Terra()
-       
+
+        """if self.__rio[nova] and isinstance(self.__rio[nova], Peixe):  # peixe
+            if isinstance(self.__rio[atual], Urso):  # and self.__rio[atual].comer(self.__rio[nova]):  # urso x peixe
+                self.__substituir_animal(nova, atual)
+
+            elif self.__rio[atual].reproduzir(self.__rio[nova]):  # peixe x peixe
+                self.__gerar(1, Peixe)
+
+        elif self.__rio[nova] and isinstance(self.__rio[nova], Urso):  # Urso
+            if self.__rio[atual].reproduzir(self.__rio[nova]):  # urso X urso
+                
+            else:
+                self.__substituir_animal(atual, nova)
+        else:
+            self.__substituir_animal(nova, atual)
+            # urso x nada
+            # peixe x nada
+            # peixe x urso
+"""
 
     def __str__(self):
         result = '|'
@@ -124,25 +164,15 @@ class Rio:
 
 
 class Animal(ABC):
-    def __init__(self):        
-        self.sexo = random.randint(0, 1)      
 
-    
     def obter_direcao(self):
         return random.randint(Direcao.ESQUERDA, Direcao.DIREITA)
 
-    
-    def reproduzir(self, other):        
+    @abstractmethod
+    def reproduzir(self, other):
+        # TODO TESTAR
         result = False
-        if self.__class__ == other.__class__ and self.sexo != other.sexo:
-            result = True
-
-        return result
-    
-    
-    def atacar(self, other):        
-        result = False
-        if self.__class__ == other.__class__ and self.sexo == Sexo.M and other.sexo == Sexo.M:
+        if self.__class__ == other.__class__:
             result = True
 
         return result
@@ -150,26 +180,45 @@ class Animal(ABC):
 
 class Urso(Animal):
 
+    def __init__(self):
+        global identifier
+        self.__id = identifier
+        identifier += 1
+
     def comer(self, other):
         result = False
         if isinstance(other, Peixe):
             result = True
-        return result    
+
+        return result
+
+    def reproduzir(self, other):
+        result = False
+        if isinstance(other, Urso):
+            result = True
+
+        return result
 
     def __str__(self):
-        if self.sexo == Sexo.F:
-            return ' 🐻 ♀️ ' 
-        else:
-            return ' 🐻 ♂️' 
+        return ' 🐻 '  # +str(self.__id)
 
 
 class Peixe(Animal):
 
+    def __init__(self):
+        global identifier
+        self.__id = identifier
+        identifier += 1
+
+    def reproduzir(self, other):
+        result = False
+        if isinstance(other, Peixe):
+            result = True
+
+        return result
+
     def __str__(self):
-        if self.sexo == Sexo.F:
-            return ' 🐟 ♀️' 
-        else:
-            return ' 🐟 ♂️'
+        return ' 🐟 '  # +str(self.__id)
 
 
 class Planta:
@@ -210,7 +259,7 @@ class Toca:
 class Terra:
 
     def __str__(self):
-        return ' 🟤 '
+        return ' T '
 
     def __eq__(self, other):
         result = False
