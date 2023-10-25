@@ -85,11 +85,8 @@ class Rio:
     def __colisao_urso(self, atual, nova):
         urso = self.__rio[atual]
         self.__controle_terra[atual] = True
-        if urso.atacar(self.__rio[nova]):
-            if urso.forca > self.__rio[nova].forca :
-               self.__arrasar(atual, nova, urso) 
-            elif urso.forca < self.__rio[nova].forca:
-               self.__arrasar(nova, atual, self.__rio[nova]) 
+        if urso.atacar(self.__rio[nova]):            
+            self.__briga_territorio(atual, nova)            
 
         elif urso.reproduzir(self.__rio[nova]):
             self.__gerar(1, Urso)
@@ -104,18 +101,11 @@ class Rio:
         elif not isinstance(self.__rio[nova], Toca):  
             self.__arrasar(atual, nova, urso)
 
-    def __arrasar(self, atual, nova, urso):
-        self.__rio[atual] = Terra()
-        self.__rio[nova] = urso
-        self.__controle_terra[nova] = True
 
     def __colisao_peixe(self, atual, nova):
         peixe = self.__rio[atual]
-        if peixe.atacar(self.__rio[nova]):
-            if peixe.forca > self.__rio[nova].forca:
-               self.__arrasar(atual, nova, peixe) 
-            elif peixe.forca < self.__rio[nova].forca :
-               self.__arrasar(nova, atual, self.__rio[nova])                
+        if peixe.atacar(self.__rio[nova]):            
+               self.__briga_territorio(atual, nova)                        
         elif peixe.reproduzir(self.__rio[nova]):
             self.__gerar(1, Peixe)
         elif isinstance(self.__rio[nova], Urso):
@@ -126,6 +116,11 @@ class Rio:
         else:  
             self.__rio[nova] = peixe
             self.__controle_terra_arrasada(atual)
+    
+    def __arrasar(self, atual, nova, urso):
+        self.__rio[atual] = Terra()
+        self.__rio[nova] = urso
+        self.__controle_terra[nova] = True
 
     def __controle_terra_arrasada(self, posicao):
         if not self.__controle_terra[posicao]:
@@ -133,8 +128,18 @@ class Rio:
         else:
             self.__rio[posicao] = Terra()
 
-    def briga_territorio(self, atual, nova):
-        ...
+    def __briga_territorio(self, atual, nova):         
+        if self.__rio[atual].forca > self.__rio[nova].forca:
+            if isinstance(self.__rio[nova].forca, Urso):
+                self.__arrasar(atual, nova, self.__rio[atual])
+            else:
+                self.__controle_terra_arrasada(nova)
+        elif self.__rio[atual].forca < self.__rio[nova].forca: 
+            if isinstance(self.__rio[atual].forca, Urso):                
+                self.__rio[atual] = Terra()                                
+            else:
+                self.__controle_terra_arrasada(atual)               
+
 
     def __str__(self):
         result = '|'
@@ -144,10 +149,9 @@ class Rio:
 
 
 class Animal(ABC):
-    def __init__(self, forca):        
+    def __init__(self, forca=0):        
         self.sexo = random.randint(0, 1) 
-        self.forca = forca     
-
+        self.forca = forca 
     
     def obter_direcao(self):
         return random.randint(Direcao.ESQUERDA, Direcao.DIREITA)
@@ -167,9 +171,14 @@ class Animal(ABC):
             result = True
 
         return result
+    
 
 
-class Urso(Animal):
+
+class Urso(Animal):    
+    def __init__(self, forca=0):        
+        self.sexo = random.randint(0, 1) 
+        self.forca = forca 
 
     def comer(self, other):
         result = False
@@ -179,18 +188,21 @@ class Urso(Animal):
 
     def __str__(self):
         if self.sexo == Sexo.F:
-            return ' 🐻 ♀️ ' 
+            return ' 🐻 ♀️ '
         else:
-            return ' 🐻 ♂️' 
+            return ' 🐻 ♂️ ' + str(self.forca)
 
 
-class Peixe(Animal):
+class Peixe(Animal):  
+    def __init__(self, forca=0):        
+        self.sexo = random.randint(0, 1) 
+        self.forca = forca 
 
     def __str__(self):
         if self.sexo == Sexo.F:
             return ' 🐟 ♀️' 
         else:
-            return ' 🐟 ♂️'
+            return '🐟 ♂️ ' + str(self.forca)
 
 
 class Planta:
